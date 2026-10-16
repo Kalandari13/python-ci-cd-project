@@ -24,3 +24,17 @@ jobs:
 
       - name: Run tests
         run: python -m pytest
+
+  build:
+    runs-on: ubuntu-latest
+
+    needs: test
+
+    steps: 
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build image
+        run : docker build -t python-ci-cd:v1 .
+
+
