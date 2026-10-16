@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gather · Messages</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="{{ url_for('static', filename='chat.js') }}" defer></script>
+</head>
+<body>
+  <section id="welcome" class="welcome">
+    <form id="join-form" class="join-card">
+      <div class="brand-mark">g.</div>
+      <p class="eyebrow">A LITTLE SPACE TO CONNECT</p>
+      <h1>Welcome to Gather.</h1>
+      <p>Pick a name, find your people, start a conversation.</p>
+      <label for="name">Display name</label>
+      <input id="name" name="name" maxlength="40" required autocomplete="nickname" placeholder="What should we call you?" autofocus>
+      <button type="submit">Enter the lounge <span aria-hidden="true">→</span></button>
+      <p id="join-status" role="status"></p>
+      <small>No signup. Just conversation.</small>
+    </form>
+  </section>
+  <main id="app" class="shell" hidden>
+    <aside class="sidebar" aria-label="People">
+      <div class="brand"><span class="brand-mark">g.</span><strong>Gather</strong><span class="pill">LIVE</span></div>
+      <div class="sidebar-heading"><h1>Messages</h1><span id="online-count"></span></div>
+      <p class="sidebar-hint">Choose someone to say hello.</p>
+      <nav id="people" aria-label="Visitors"></nav>
+      <div class="profile"><span id="my-avatar" class="avatar"></span><div><strong id="my-name"></strong><small><i class="dot"></i> You're online</small></div></div>
+    </aside>
+    <section class="conversation" aria-label="Conversation">
+      <header class="chat-header"><span id="peer-avatar" class="avatar">✦</span><div><h2 id="peer-name">Your conversations start here</h2><p id="peer-status">A small hello can go a long way.</p></div><span class="header-note">DIRECT MESSAGE</span></header>
+      <div id="empty" class="empty"><div class="empty-icon">↗</div><h2>Make room for a hello.</h2><p>Pick a person on the left to start chatting.<br>New messages appear automatically.</p><span class="empty-tag">Good conversations start small.</span></div>
+      <ol id="messages" aria-label="Messages" aria-live="polite" hidden></ol>
+      <form id="chat-form" class="composer">
+        <label for="text" class="sr-only">Message</label>
+        <textarea id="text" name="text" maxlength="1000" rows="1" placeholder="Choose a person to start a conversation…" required disabled></textarea>
+        <button type="submit" id="send" disabled>Send <span aria-hidden="true">↑</span></button>
+      </form>
+      <footer><span id="status" role="status">Messages stay here until the server restarts.</span><span>Enter to send · Shift + Enter for a new line</span></footer>
+    </section>
+  </main>
+</body>
+</html>
