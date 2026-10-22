@@ -1,3 +1,4 @@
+import os 
 from datetime import datetime, timezone
 from secrets import token_hex
 from threading import Lock
@@ -5,16 +6,33 @@ from time import monotonic
 
 from flask import Flask, jsonify, render_template, request, session
 from werkzeug.exceptions import RequestEntityTooLarge
+from database import get_connection
 
 
 def create_app():
     app = Flask(__name__)
     # Ephemeral identities, like messages, intentionally reset on restart.
-    app.config.update(SECRET_KEY=token_hex(32), MAX_CONTENT_LENGTH=16 * 1024,
+    app.config.update(SECRET_KEY=os.environ.get("FLAST_SECRET_KEY") or token_hex(32), MAX_CONTENT_LENGTH=16 * 1024,
                       SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax")
     users = {}
     messages = []
     lock = Lock()
+    
+
+    #connect to databse 
+
+    @app.get("/health/db")
+    def database_health():
+        try:
+            with get_connection() as conn:
+                result = conn.execute("SELECT 1").fetchone()
+            return jsonify(database="connected", result=result[0])
+        except Exception:
+            app.logger.exception("Database health check failed")
+            return jsonify(database="unavailable"), 503
+
+
+
 
     def json_body():
         data = request.get_json(silent=True) if request.is_json else None
