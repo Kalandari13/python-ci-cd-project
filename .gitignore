@@ -4,3 +4,10 @@ __pycache__/
 .env
 .env.*
 !.env.example
+
+.secrets/
+backups/
+
+*.pyc
+*.dump
+*.sql.gz

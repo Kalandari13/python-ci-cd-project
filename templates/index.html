@@ -8,37 +8,80 @@
   <script src="{{ url_for('static', filename='chat.js') }}" defer></script>
 </head>
 <body>
-  <section id="welcome" class="welcome">
-    <form id="join-form" class="join-card">
-      <div class="brand-mark">g.</div>
+  <section id="welcome" class="welcome" aria-label="Account access">
+    <div class="join-card">
+      <div class="brand-mark" aria-hidden="true">g.</div>
       <p class="eyebrow">A LITTLE SPACE TO CONNECT</p>
-      <h1>Welcome to Gather.</h1>
-      <p>Pick a name, find your people, start a conversation.</p>
-      <label for="name">Display name</label>
-      <input id="name" name="name" maxlength="40" required autocomplete="nickname" placeholder="What should we call you?" autofocus>
-      <button type="submit">Enter the lounge <span aria-hidden="true">→</span></button>
-      <p id="join-status" role="status"></p>
-      <small>No signup. Just conversation.</small>
-    </form>
+      <h1 id="auth-title">Welcome back to Gather.</h1>
+      <p id="auth-intro">Sign in and make room for a hello.</p>
+      <div class="auth-modes" role="group" aria-label="Account action">
+        <button id="login-mode" type="button" aria-pressed="true">Log in</button>
+        <button id="register-mode" type="button" aria-pressed="false">Create account</button>
+      </div>
+      <form id="auth-form" aria-labelledby="auth-title" aria-busy="true">
+        <label for="username">Username</label>
+        <input id="username" name="username" maxlength="40" required autocomplete="username" autocapitalize="none" spellcheck="false" aria-describedby="username-help" disabled>
+        <small id="username-help">Use your account username (up to 40 characters).</small>
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" maxlength="128" required autocomplete="current-password" aria-describedby="password-help" disabled>
+        <small id="password-help">Enter your account password.</small>
+        <button id="auth-submit" type="submit" disabled>Log in <span aria-hidden="true">→</span></button>
+      </form>
+      <p id="auth-status" role="status" aria-live="polite">Checking your session…</p>
+      <button id="retry-session" class="text-button" type="button" hidden>Retry session check</button>
+      <small>Your account. Your little space to connect.</small>
+    </div>
   </section>
   <main id="app" class="shell" hidden>
-    <aside class="sidebar" aria-label="People">
-      <div class="brand"><span class="brand-mark">g.</span><strong>Gather</strong><span class="pill">LIVE</span></div>
-      <div class="sidebar-heading"><h1>Messages</h1><span id="online-count"></span></div>
-      <p class="sidebar-hint">Choose someone to say hello.</p>
-      <nav id="people" aria-label="Visitors"></nav>
-      <div class="profile"><span id="my-avatar" class="avatar"></span><div><strong id="my-name"></strong><small><i class="dot"></i> You're online</small></div></div>
+    <aside class="sidebar" aria-label="Your Gather space">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">g.</span><strong>Gather</strong></div>
+      <div class="sidebar-heading"><h1>Your space</h1></div>
+      <p class="sidebar-hint">Good conversations start small.</p>
+      <nav id="workspace-nav" aria-label="Workspace">
+        <button type="button" data-panel="chats" aria-pressed="true">Messages</button>
+        <button type="button" data-panel="groups" aria-pressed="false">Groups</button>
+        <button type="button" data-panel="friends" aria-pressed="false">Friends</button>
+      </nav>
+      <div class="sidebar-content">
+        <section id="chats-list-panel"><div id="conversation-list"></div></section>
+      <section id="friends-panel" class="workspace-panel feature-panel" aria-label="Friends" hidden>
+        <h3>Your friends</h3><div id="friends-list"></div><details><summary>Add friends and requests</summary><h2>Find your people.</h2><p>Search by exact username and connect with a friend.</p>
+        <form id="friend-search"><label for="friend-username">Exact username</label><div class="inline-controls"><input id="friend-username" name="username" maxlength="40" required placeholder="Username" autocomplete="off"><button type="submit">Search</button></div></form>
+        <p id="friend-status" role="status" aria-live="polite"></p>
+        <div id="search-results"></div>
+        <h3>Friend requests</h3><div id="friend-requests"></div></details>
+
+      </section>
+      <section id="groups-panel" class="workspace-panel feature-panel" aria-label="Groups" hidden>
+        <div id="groups-list"></div><details><summary>Create groups and invitations</summary><h2>A space for everyone.</h2><p>Bring your friends together in a named group.</p>
+        <form id="create-group"><label for="group-name">Group name</label><input id="group-name" name="name" maxlength="100" required placeholder="Give your group a name"><button type="submit">Create group</button></form>
+        <p id="group-status" role="status" aria-live="polite"></p>
+        <form id="invite-friend"><label for="group-select">Group</label><select id="group-select" required><option value="">Choose a group</option></select><label for="group-friend">Invite an accepted friend</label><select id="group-friend" required><option value="">Choose a friend</option></select><button type="submit">Invite friend</button><p>Only the group owner can send invitations.</p></form>
+        <h3>Group invitations</h3><div id="group-invitations"></div></details>
+      </section>
+      </div>
+      <div class="profile"><span id="my-avatar" class="avatar" aria-hidden="true"></span><div><strong id="my-name"></strong><small>Signed in</small></div><button id="logout" class="text-button" type="button">Log out</button></div>
+      <p id="account-status" class="sidebar-hint" role="status"></p>
     </aside>
-    <section class="conversation" aria-label="Conversation">
-      <header class="chat-header"><span id="peer-avatar" class="avatar">✦</span><div><h2 id="peer-name">Your conversations start here</h2><p id="peer-status">A small hello can go a long way.</p></div><span class="header-note">DIRECT MESSAGE</span></header>
-      <div id="empty" class="empty"><div class="empty-icon">↗</div><h2>Make room for a hello.</h2><p>Pick a person on the left to start chatting.<br>New messages appear automatically.</p><span class="empty-tag">Good conversations start small.</span></div>
-      <ol id="messages" aria-label="Messages" aria-live="polite" hidden></ol>
-      <form id="chat-form" class="composer">
-        <label for="text" class="sr-only">Message</label>
-        <textarea id="text" name="text" maxlength="1000" rows="1" placeholder="Choose a person to start a conversation…" required disabled></textarea>
-        <button type="submit" id="send" disabled>Send <span aria-hidden="true">↑</span></button>
-      </form>
-      <footer><span id="status" role="status">Messages stay here until the server restarts.</span><span>Enter to send · Shift + Enter for a new line</span></footer>
+    <section class="conversation" aria-label="Workspace content">
+      <header class="chat-header"><span class="avatar" aria-hidden="true">✦</span><div><h2 id="panel-title" tabindex="-1">Your conversations start here</h2><p id="panel-subtitle">A small hello can go a long way.</p></div><span class="header-note">GATHER</span></header>
+      <div class="availability" role="note">Find a friend by exact username. Once they accept, start a private conversation or invite them to a group.</div>
+      <section id="chats-panel" class="workspace-panel" aria-label="Private messages">
+        <p id="conversation-members" class="draft-help"></p>
+        <ol id="messages" aria-label="Messages" aria-live="polite"></ol>
+        <div class="draft-area">
+          <p id="draft-help" class="draft-help">Select a friend or group on the left to send messages.</p>
+          <form id="chat-form" class="composer">
+            <label for="text" class="sr-only">Message</label>
+            <textarea id="text" name="text" maxlength="1000" rows="2" placeholder="Write a little hello…" aria-describedby="draft-help draft-count"></textarea>
+            <button id="emoji-toggle" class="emoji-toggle" type="button" aria-label="Choose an emoji" aria-expanded="false" aria-controls="emoji-picker">☺</button>
+            <button id="send" type="submit" disabled>Send ↑</button>
+          </form>
+          <div id="emoji-picker" class="emoji-picker" role="group" aria-label="Emoji picker" hidden></div>
+          <p id="draft-count" class="draft-help">0 / 1000 characters</p>
+        </div>
+      </section>
+      <footer><span id="status" role="status">Your conversations are saved to your Gather account.</span></footer>
     </section>
   </main>
 </body>

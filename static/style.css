@@ -68,3 +68,105 @@ footer { padding: 12px 30px 18px; color: #949e92; font-size: 10px; display: flex
 @media (max-width: 760px) { .shell { margin: 0; height: 100dvh; border-radius: 0; grid-template-columns: 210px minmax(0, 1fr); } .header-note, footer > span:last-child { display: none; } .chat-header { padding: 18px; } .composer { margin: 12px 12px 0; } #messages { padding: 18px; } footer { padding: 12px; } }
 @media (max-width: 480px) { .shell { grid-template-columns: 115px minmax(0, 1fr); } .brand { padding: 18px 12px; font-size: 16px; gap: 6px; } .brand-mark { width: 28px; height: 30px; font-size: 20px; } .pill, .sidebar-hint, .person > .avatar, .profile > .avatar, #online-count { display: none; } .sidebar-heading { padding: 12px; } .sidebar-heading h1 { font-size: 14px; } #people { padding: 0 5px; } .person { padding: 13px 8px; gap: 3px; } .profile { padding: 16px 10px; } .empty h2 { font-size: 20px; } .composer { gap: 2px; padding: 6px; } .composer button { padding: 11px; } .composer button span { display: none; } .chat-header .avatar { display: none; } .bubble { max-width: 95%; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+/* Persistent account access and workspace panels retain Gather's original palette. */
+select { font: inherit; }
+button:focus-visible, select:focus-visible { outline: 3px solid #94c9ad; outline-offset: 3px; }
+.join-card .auth-modes { display: flex; gap: 8px; margin-top: 22px; }
+.join-card .auth-modes button { margin: 0; justify-content: center; background: #f0f3ec; color: var(--ink); padding: 11px 8px; }
+.join-card .auth-modes button[aria-pressed="true"] { background: var(--green); color: white; }
+.join-card label { margin-top: 20px; }
+.join-card input + small { text-align: left; margin-top: 7px; font-size: 11px; line-height: 1.5; }
+.join-card #auth-status { color: var(--ink); min-height: 23px; overflow-wrap: anywhere; }
+.text-button, .join-card .text-button { width: auto; background: transparent; color: var(--green); border: 1px solid #d8e1d8; border-radius: 8px; padding: 8px 10px; font-size: 12px; }
+#workspace-nav { flex: 1; padding: 0 12px; overflow-y: auto; }
+.profile { flex-wrap: wrap; padding: 16px; gap: 10px; }
+.profile > div { flex: 1; }
+#account-status:empty { display: none; }
+.availability { padding: 12px 28px; background: #f3f6ed; border-bottom: 1px solid var(--line); font-size: 12px; line-height: 1.6; color: #53674f; }
+.workspace-panel { flex: 1; min-height: 0; overflow-y: auto; }
+#chats-panel { display: flex; flex-direction: column; }
+.feature-panel { padding: 24px 30px; }
+.feature-panel h2 { font-size: 25px; letter-spacing: -.8px; }
+.feature-panel h3 { font-size: 15px; margin-top: 28px; }
+.feature-panel p { font-size: 13px; line-height: 1.7; color: #627267; }
+.feature-panel fieldset { border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin: 24px 0 10px; }
+.feature-panel legend { font-size: 13px; font-weight: 600; padding: 0 6px; }
+.feature-panel label { display: block; font-size: 12px; margin: 10px 0 8px; }
+.feature-panel input, .feature-panel select { width: 100%; min-width: 0; border: 1px solid #d8e1d8; border-radius: 8px; background: #fafbf8; padding: 11px; color: var(--ink); }
+.feature-panel button { border: 1px solid #d8e1d8; border-radius: 8px; padding: 10px 14px; color: var(--ink); background: #edf2e8; margin-top: 12px; }
+.feature-panel :disabled { cursor: not-allowed; }
+.feature-panel .feature-note { color: #657647; }
+.inline-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.inline-controls input { flex: 1; }
+.inline-controls button { margin-top: 0; }
+.draft-area { position: relative; }
+.draft-help { margin: 8px 30px; color: #627267; font-size: 11px; line-height: 1.5; }
+.composer { margin-top: 8px; }
+.composer .emoji-toggle { padding: 9px 12px; background: #e5eddf; color: var(--green); font-size: 20px; }
+.emoji-picker { position: absolute; right: 30px; bottom: 90px; width: min(280px, calc(100% - 32px)); background: white; border: 1px solid #d8e1d8; border-radius: 12px; box-shadow: 0 8px 25px #203d3020; padding: 10px; display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+.emoji-picker button { padding: 7px 3px; border: 0; border-radius: 6px; background: #f3f6ed; font-size: 22px; }
+footer { border-top: 1px solid var(--line); }
+@media (max-width: 760px) {
+  .shell { grid-template-columns: 190px minmax(0, 1fr); }
+  .feature-panel { padding: 16px; }
+  .availability { padding: 12px 16px; }
+  .draft-help { margin-left: 16px; margin-right: 16px; }
+}
+@media (max-width: 560px) {
+  .shell { display: flex; flex-direction: column; height: 100dvh; }
+  .sidebar { flex-shrink: 0; border-right: 0; border-bottom: 1px solid var(--line); }
+  .brand { padding: 10px 16px; font-size: 18px; }
+  .brand-mark { width: 30px; height: 30px; font-size: 21px; }
+  .sidebar-heading, .sidebar > .sidebar-hint:not(#account-status) { display: none; }
+  #workspace-nav { display: flex; gap: 4px; overflow: visible; padding: 0 8px 8px; }
+  #workspace-nav .person { justify-content: center; padding: 10px 6px; margin: 0; }
+  #workspace-nav .person .avatar, #workspace-nav small { display: none; }
+  #workspace-nav .person-info { flex: none; }
+  .profile { position: absolute; top: 6px; right: 8px; padding: 4px; border: 0; max-width: 65%; }
+  .profile > .avatar, .profile small { display: none; }
+  .profile strong { max-width: 110px; }
+  #account-status { padding: 0 12px; margin: 0 0 8px; }
+  .conversation { flex: 1; }
+  .chat-header { padding: 12px 16px; }
+  .availability { font-size: 11px; padding: 8px 16px; }
+  .empty { padding: 16px; }
+  .empty-icon { padding: 8px 17px; margin-bottom: 0; font-size: 26px; }
+  .empty-tag { display: none; }
+  .empty h2 { margin-top: 12px; }
+  .join-card { padding: 26px; }
+  .feature-panel h2 { margin-top: 6px; }
+}
+.social-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 10px 0; padding: 12px; border: 1px solid var(--line); border-radius: 10px; }
+.social-row span { flex: 1; overflow-wrap: anywhere; min-width: 100px; }
+.social-row button { margin: 0; }
+#conversation-select { margin: 0 24px 8px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: #fafbf8; color: var(--ink); max-width: calc(100% - 48px); }
+#friend-requests, #friends-list, #group-invitations, #search-results { font-size: 13px; }
+#messages { flex: 1 1 0; min-height: 80px; }
+.message small { font-size: 10px; color: #627267; margin-top: 5px; }
+/* Conversation navigation stays beside the open chat. */
+#workspace-nav { flex: none; display: flex; gap: 4px; padding: 0 12px 12px; overflow: visible; }
+#workspace-nav button { flex: 1; min-width: 0; border: 0; border-radius: 8px; padding: 10px 4px; background: transparent; color: var(--ink); font-size: 12px; }
+#workspace-nav button[aria-pressed="true"] { background: #e6efdf; color: var(--green); font-weight: 700; }
+.sidebar-content { flex: 1; min-height: 0; overflow-y: auto; padding: 0 12px 16px; }
+.sidebar-content .feature-panel { padding: 0; overflow: visible; }
+.sidebar-content .feature-panel h2 { font-size: 18px; }
+.sidebar-content .feature-panel h3 { margin-top: 12px; }
+.sidebar-content details { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 16px; }
+.sidebar-content summary { cursor: pointer; font-size: 12px; color: var(--green); }
+#conversation-list, #groups-list { font-size: 13px; line-height: 1.6; }
+.bubble { border: 0; color: inherit; text-align: left; cursor: pointer; }
+.message { margin-bottom: 8px; }
+@media (max-width: 560px) {
+  .shell { display: grid; grid-template-columns: 145px minmax(0, 1fr); }
+  .sidebar { min-height: 0; border-right: 1px solid var(--line); }
+  #workspace-nav { flex-wrap: wrap; padding: 0 6px 8px; gap: 2px; }
+  #workspace-nav button { flex-basis: 100%; padding: 7px 3px; }
+  .sidebar-content { padding: 0 6px 10px; }
+  .sidebar-content .person { padding: 10px 6px; }
+  .profile { position: static; max-width: none; padding: 10px 6px; border-top: 1px solid var(--line); }
+  .brand { padding: 12px 8px; }
+  .availability { display: none; }
+  .composer { flex-wrap: wrap; }
+  .composer textarea { flex-basis: 100%; }
+  .chat-header { padding: 12px; }
+}

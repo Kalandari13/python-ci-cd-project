@@ -9,3 +9,6 @@ tests
 htmlcov
 .env
 .env.*
+
+.secrets/
+backups/

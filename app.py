@@ -1,25 +1,123 @@
-import os 
-from datetime import datetime, timezone
+import os
 from secrets import token_hex
-from threading import Lock
-from time import monotonic
 
 from flask import Flask, jsonify, render_template, request, session
 from werkzeug.exceptions import RequestEntityTooLarge
+from psycopg.errors import UniqueViolation
+from psycopg import OperationalError
+from werkzeug.security import generate_password_hash, check_password_hash
 from database import get_connection
+from social import social
+from security import allow_request, client_address
+from urllib.parse import urlsplit
 
 
 def create_app():
     app = Flask(__name__)
-    # Ephemeral identities, like messages, intentionally reset on restart.
-    app.config.update(SECRET_KEY=os.environ.get("FLAST_SECRET_KEY") or token_hex(32), MAX_CONTENT_LENGTH=16 * 1024,
-                      SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax")
-    users = {}
-    messages = []
-    lock = Lock()
-    
+    app.config.update(SECRET_KEY=os.environ["FLASK_SECRET_KEY"], MAX_CONTENT_LENGTH=16 * 1024,
+                      SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax",
+                      SESSION_COOKIE_SECURE=os.environ.get("SESSION_COOKIE_SECURE", "false").lower() == "true")
+    app.register_blueprint(social)
+    public_origin = os.environ.get('PUBLIC_ORIGIN', '').rstrip('/')
+    if public_origin:
+        origin = urlsplit(public_origin)
+        if (origin.scheme != 'https' or not origin.hostname or origin.username or origin.password
+                or origin.path or origin.query or origin.fragment):
+            raise ValueError('PUBLIC_ORIGIN must be an HTTPS origin without a path.')
+    app.config['PUBLIC_ORIGIN'] = public_origin
 
-    #connect to databse 
+    #user identifier, password hash, registration
+
+    @app.post("/api/register")
+    def register():
+        data = json_body()
+
+        username = data.get("username")
+        password = data.get("password")
+
+        if not valid_text(username, 40):
+            return jsonify(error="Username must be 1-40 characters."), 400
+
+        if not isinstance(password, str) or not 10 <= len(password) <= 128:
+            return jsonify(error="Password must be 10-128 characters."), 400
+
+        username = username.strip()
+        user_id = token_hex(16)
+        password_hash = generate_password_hash(password)
+
+        try:
+            with get_connection() as conn:
+                conn.execute(
+                    """
+                    INSERT INTO users (id, username, password_hash)
+                    VALUES (%s, %s, %s)
+                    """,
+                    (user_id, username, password_hash)
+                )
+
+        except UniqueViolation:
+            return jsonify(error="Username already taken."), 409
+
+        session.clear()
+        session["user_id"] = user_id
+
+        return jsonify(id=user_id, username=username), 201
+    #login checking
+
+    @app.post("/api/login")
+    def login():
+        data = json_body()
+
+        username = data.get("username")
+        password = data.get("password")
+
+        if not valid_text(username, 40) or not isinstance(password, str) or not 1 <= len(password) <= 128:
+            return jsonify(error="Invalid username or password."), 401
+
+        with get_connection() as conn:
+            user = conn.execute(
+                """
+                SELECT id, username, password_hash
+                FROM users
+                WHERE LOWER(username) = LOWER(%s)
+                """,
+                (username.strip(),)
+            ).fetchone()
+
+        if user is None or not check_password_hash(user[2], password):
+            return jsonify(error="Invalid username or password."), 401
+
+        session.clear()
+        session["user_id"] = user[0]
+
+        return jsonify(id=user[0], username=user[1]), 200
+
+    #logout
+
+    @app.post("/api/logout")
+    def logout():
+        session.clear()
+        return jsonify(message="Logged out successfully."), 200
+
+    #logged in use account info
+
+    @app.get("/api/me")
+    def current_user():
+        user_id = session["user_id"]
+
+        with get_connection() as conn:
+            user = conn.execute(
+                """
+                SELECT id, username
+                FROM users
+                WHERE id = %s
+                """,
+                (user_id,)
+            ).fetchone()
+
+        return jsonify(id=user[0], username=user[1])
+
+    #connect to databse
 
     @app.get("/health/db")
     def database_health():
@@ -39,16 +137,79 @@ def create_app():
         return data if isinstance(data, dict) else {}
 
     def valid_text(value, limit):
-        return isinstance(value, str) and 0 < len(value.strip()) <= limit
+        return isinstance(value, str) and "\x00" not in value and 0 < len(value.strip()) <= limit
+
+    @app.before_request
+    def request_security():
+        if not request.path.startswith('/api/'):
+            return None
+        if any(isinstance(value, int) and value > 9223372036854775807
+               for value in (request.view_args or {}).values()):
+            return jsonify(error='Invalid identifier.'), 400
+        if request.method == 'POST':
+            origin = request.headers.get('Origin')
+            allowed_origins = {'http://localhost:5000', 'http://127.0.0.1:5000'}
+            if app.config['TESTING']:
+                allowed_origins.add('http://localhost')
+            if app.config['PUBLIC_ORIGIN']:
+                allowed_origins.add(app.config['PUBLIC_ORIGIN'])
+            if (request.headers.get('Sec-Fetch-Site') == 'cross-site'
+                    or (origin and origin not in allowed_origins)):
+                return jsonify(error='Cross-origin requests are not allowed.'), 403
+            if not request.is_json:
+                return jsonify(error='Send an application/json request.'), 415
+        address = client_address()
+        if request.method == 'POST' or request.path == '/api/users/search':
+            auth = request.path in ('/api/login', '/api/register')
+            actor = address if auth else session.get('user_id', address)
+            if not allow_request('auth' if auth else 'social', actor, 20 if auth else 120):
+                return jsonify(error='Too many requests. Try again in a minute.'), 429, {'Retry-After': '60'}
+        return None
+
+    @app.after_request
+    def security_headers(response):
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['Referrer-Policy'] = 'same-origin'
+        response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+        if request.path.startswith('/api/'):
+            response.headers['Cache-Control'] = 'no-store'
+        return response
 
     @app.before_request
     def identify_visitor():
-        if request.path.startswith("/api/") and request.path != "/api/join":
-            with lock:
-                user = users.get(session.get("user_id"))
-                if user is None:
-                    return jsonify(error="Enter your name to join."), 401
-                user["last_seen"] = monotonic()
+        protected = (
+            request.path.startswith("/api/")
+            and request.path not in (
+                "/api/register",
+                "/api/login",
+                "/api/logout",
+            )
+        )
+
+        if not protected:
+            return None
+
+        user_id = session.get("user_id")
+
+        if not user_id:
+            return jsonify(error="Login required."), 401
+
+        with get_connection() as conn:
+            user = conn.execute(
+                "SELECT id FROM users WHERE id = %s",
+                (user_id,)
+            ).fetchone()
+
+            if user is None:
+                session.clear()
+                return jsonify(error="Login required."), 401
+
+            conn.execute(
+                "UPDATE users SET last_seen = NOW() WHERE id = %s",
+                (user_id,)
+            )
+
+        return None
 
     @app.get("/")
     def index():
@@ -58,61 +219,14 @@ def create_app():
     def health():
         return jsonify(status="ok")
 
-    @app.post("/api/join")
-    def join():
-        name = json_body().get("name")
-        if not valid_text(name, 40):
-            return jsonify(error="Enter a name between 1 and 40 characters."), 400
-        name = name.strip()
-        with lock:
-            existing = users.get(session.get("user_id"))
-            if existing:
-                existing["last_seen"] = monotonic()
-                return jsonify(id=existing["id"], name=existing["name"])
-            if any(u["name"].casefold() == name.casefold() for u in users.values()):
-                return jsonify(error="That name is taken. Choose another name."), 409
-            user_id = token_hex(16)
-            users[user_id] = {"id": user_id, "name": name, "last_seen": monotonic()}
-            session["user_id"] = user_id
-        return jsonify(id=user_id, name=name), 201
-
-    @app.get("/api/users")
-    def get_users():
-        with lock:
-            # Keep offline identities for conversation history, but mark presence.
-            visitors = [{"id": u["id"], "name": u["name"],
-                         "online": monotonic() - u["last_seen"] < 30}
-                        for u in users.values()]
-        return jsonify(me=session["user_id"], users=visitors)
-
-    @app.get("/api/messages")
-    def get_messages():
-        user_id = session["user_id"]
-        with lock:
-            return jsonify([m for m in messages
-                            if user_id in (m["sender_id"], m["recipient_id"])])
-
-    @app.post("/api/messages")
-    def post_message():
-        data = json_body()
-        text = data.get("text")
-        recipient = data.get("recipient_id")
-        if not valid_text(text, 1000):
-            return jsonify(error="Message must be between 1 and 1,000 characters."), 400
-        if not isinstance(recipient, str):
-            return jsonify(error="Choose a person to message."), 400
-        with lock:
-            if recipient not in users or recipient == session["user_id"]:
-                return jsonify(error="Choose another visitor to message."), 400
-            message = {"id": len(messages) + 1, "sender_id": session["user_id"],
-                       "recipient_id": recipient, "text": text.strip(),
-                       "created_at": datetime.now(timezone.utc).isoformat()}
-            messages.append(message)
-        return jsonify(message), 201
-
     @app.errorhandler(RequestEntityTooLarge)
     def too_large(error):
         return jsonify(error="Request body must be at most 16 KiB."), 413
+
+    @app.errorhandler(OperationalError)
+    def database_unavailable(error):
+        app.logger.exception("Database connection failed")
+        return jsonify(error="Account service is temporarily unavailable. Please try again."), 503
 
     return app
 

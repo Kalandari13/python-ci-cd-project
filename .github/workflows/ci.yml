@@ -10,6 +10,23 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U testuser -d testdb"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://testuser:testpassword@localhost:5432/testdb
+      FLASK_SECRET_KEY: ci-test-secret-only
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -22,8 +39,16 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
       - name: Run tests
-        run: python -m pytest
+        run: |
+          python -m pytest
+          node --check static/chat.js
+          node tests/check_frontend.cjs
 
   build:
     runs-on: ubuntu-latest
@@ -36,38 +61,4 @@ jobs:
 
       - name: Build image
         run : docker build -t python-ci-cd:v1 .
-
-  publish:
-    runs-on: ubuntu-latest
-    needs: test
-
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: |
-            ghcr.io/kalandari13/python-ci-cd-project:latest
-            ghcr.io/kalandari13/python-ci-cd-project:${{ github.sha }}
-
 
